@@ -1,13 +1,190 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ရွှေသာ (Shwe Thar) Translator</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
-</html>
+<!DOCTYPE html>
+<html lang="my">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>English Novel → မြန်မာဘာသာပြန်</title>
+  <link href="https://fonts.googleapis.com/css2?family=Pyidaungsu:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Pyidaungsu', system-ui, sans-serif;
+      background: linear-gradient(to bottom, #f0f4f8, #d9e2ec);
+      margin: 0;
+      padding: 20px 10px;
+      color: #1a1a1a;
+      line-height: 1.7;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    header {
+      background: #2c5282;
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+    h1 {
+      margin: 0;
+      font-size: 2.1rem;
+    }
+    .input-section, .output-section {
+      padding: 20px;
+    }
+    textarea {
+      width: 100%;
+      min-height: 220px;
+      padding: 16px;
+      font-size: 1.05rem;
+      border: 2px solid #cbd5e0;
+      border-radius: 8px;
+      resize: vertical;
+      box-sizing: border-box;
+      margin-bottom: 15px;
+    }
+    button {
+      background: #3182ce;
+      color: white;
+      border: none;
+      padding: 14px 32px;
+      font-size: 1.1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      display: block;
+      margin: 0 auto 10px;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #2b6cb0;
+    }
+    button:disabled {
+      background: #a0aec0;
+      cursor: not-allowed;
+    }
+    #status {
+      text-align: center;
+      color: #4a5568;
+      font-style: italic;
+      min-height: 1.5em;
+    }
+    #output {
+      background: #fefcbf;
+      border: 2px solid #d69e2e;
+      border-radius: 8px;
+      padding: 18px;
+      white-space: pre-wrap;
+      font-size: 1.05rem;
+      min-height: 150px;
+      display: none;
+    }
+    @media (max-width: 600px) {
+      h1 { font-size: 1.7rem; }
+      textarea { font-size: 1rem; }
+    }
+  </style>
+</head>
+<body>
 
+<div class="container">
+  <header>
+    <h1>English Novel ကို မြန်မာလို ဘာသာပြန်ပေးမယ်</h1>
+  </header>
+
+  <div class="input-section">
+    <textarea id="input" placeholder="ဘာသာပြန်ချင်တဲ့ English စာပိုဒ် / အပိုင်းကို ဒီမှာ ကူးထည့်ပါ... (၅၀၀-၂၀၀၀ စကားလုံးလောက်ထိ အကောင်းဆုံး)"></textarea>
+    <button id="translateBtn">ဘာသာပြန်မယ် →</button>
+    <div id="status">အဆင်သင့်ပါ။ စာသားထည့်ပြီး ခလုတ်နှိပ်ပါ။</div>
+  </div>
+
+  <div class="output-section">
+    <div id="output"></div>
+  </div>
+</div>
+
+<script type="module">
+  // ────────────────────────────────────────────────
+  // ဒီနေရာမှာ သင့် API Key ကို ထည့်ပါ (Google AI Studio ကနေ ရလာတဲ့ key)
+  const GEMINI_API_KEY = "AIzaSyCxjysD_cGEJk7wNNAhhBgRyMdgj9xhWFc";   // ←←← ဒီနေရာကို အရေးကြီး ပြင်ပါ!!
+  // ────────────────────────────────────────────────
+
+  // လက်ရှိ stable မော်ဒယ် (2026 မှာ အလုပ်လုပ်နေတဲ့ တစ်ခု)
+  const MODEL_NAME = "gemini-2.5-flash";  
+  const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/\( {MODEL_NAME}:generateContent?key= \){GEMINI_API_KEY}`;
+
+  const systemInstruction = `
+မင်းဟာ မြန်မာစာပေနဲ့ အဂ်လိပ်စာပေကို နှစ်ပေါင်းများစွာ လေ့လာထားတဲ့ ပရော်ဖက်ရှင်နယ် စာပေဘာသာပြန်ဆရာ တစ်ယောက်ပါ။ 
+မြန်မာစာဖတ်သူတွေ အတွက် အသုံးအများဆုံး၊ သဘာဝကျကျ၊ ခံစားမှုပါဝင်ပြီး စီးဆင်းမှု ကောင်းတဲ့ စကားလုံးတွေ၊ စကားစုတွေကိုပဲ အမြဲသုံးပါ။
+
+ဘာသာပြန်တဲ့အခါ အောက်ပါ အချက်တွေကို တစ်ချိန်တည်း လိုက်နာပါ။
+1. စကားလုံးတိုင်းကို တိုက်ရိုက်ဘာသာမပြန်ပါနဲ့။ မြန်မာစာဖတ်သူ သဘာဝအတိုင်း ခံစားရအောင် ပြန်ဆိုပါ။
+2. စာပေဆန်ဆန် ဖြစ်အောင် လုပ်ပါ။ ဇာတ်ကောင်ရဲ့ ခံစားချက်၊ မြင်ကွင်း၊ အသံ၊ အနံ့ စတဲ့ အသေးစိတ်တွေ ထင်ရှားစေပါ။
+3. မြန်မာစကားပြောဟန် သို့မဟုတ် စာပေစကားဟန်ကို ဇာတ်ကောင်နဲ့ အခြေအနေအလိုက် သင့်တော်အောင် ပြောင်းပါ။
+4. အင်္ဂလိပ်စာလုံး အတိုက်အခံ မဖြစ်အောင် ရှောင်ပါ။
+5. မူရင်း စာသားရဲ့ ခံစားမှု၊ လေသံ၊ ဟာသပါရင် ဟာသ၊ ဝမ်းနည်းစရာဆို ဝမ်းနည်းစရာ ခံစားမှုကို ထိန်းထားပါ။
+6. ရလဒ်ကို မြန်မာစာသားသန့်သန့်ပဲ ထုတ်ပေးပါ။ ရှင်းလင်းချက်၊ မှတ်ချက်၊ အင်္ဂလိပ်စာ လုံးဝ မထည့်ပါနဲ့။
+
+အခု အောက်မှာ ပေးမယ့် အင်္ဂလိပ်စာသားကို အထက်ပါ စည်းကမ်းတွေနဲ့ အတိအကျ မြန်မာစာသို့ ဘာသာပြန်ပေးပါ။
+`;
+
+  const inputEl   = document.getElementById("input");
+  const outputEl  = document.getElementById("output");
+  const btn       = document.getElementById("translateBtn");
+  const statusEl  = document.getElementById("status");
+
+  btn.addEventListener("click", async () => {
+    const text = inputEl.value.trim();
+    if (!text) {
+      alert("ဘာသာပြန်ချင်တဲ့ စာသားကို ထည့်ပေးပါ။");
+      return;
+    }
+
+    btn.disabled = true;
+    statusEl.textContent = "ဘာသာပြန်နေပါပြီ... ခဏလေး စောင့်ပါ။";
+    outputEl.style.display = "none";
+    outputEl.textContent = "";
+
+    try {
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{
+            role: "user",
+            parts: [{ text: systemInstruction + "\n\n===================\n\n" + text }]
+          }],
+          generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 2048,
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error?.message || "API ခေါ်မရပါ (status: " + response.status + ")");
+      }
+
+      const data = await response.json();
+      const translated = data.candidates?.[0]?.content?.parts?.[0]?.text || "(ဘာမှ မထွက်လာပါ)";
+
+      outputEl.textContent = translated.trim();
+      outputEl.style.display = "block";
+      statusEl.textContent = "ပြီးပါပြီ ✓ နောက်ထပ် ဘာသာပြန်ချင်ရင် ဆက်ထည့်ပါ။";
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = "အမှားတစ်ခု ဖြစ်သွားပါပြီ: " + err.message;
+      alert("အမှား: " + err.message + "\n\nAPI key မှန်ကန်ရဲ့လား၊ သို့မဟုတ် quota ကုန်နေလားစစ်ကြည့်ပါ။");
+    } finally {
+      btn.disabled = false;
+    }
+  });
+</script>
+
+</body>
+</html>
