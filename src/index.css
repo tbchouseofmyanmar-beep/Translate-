@@ -5,17 +5,56 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Cormorant Garamond", serif;
   
-  --color-paper: #fdfcf8;
-  --color-ink: #1a1a1a;
-  --color-accent: #5a5a40;
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-accent: var(--accent);
+}
+
+:root {
+  --paper: #fdfcf8;
+  --ink: #1a1a1a;
+  --accent: #5a5a40;
+}
+
+.dark {
+  --paper: #1a1a15;
+  --ink: #fdfcf8;
+  --accent: #a0a080;
 }
 
 @layer base {
   body {
-    @apply bg-paper text-ink font-sans antialiased;
+    @apply bg-paper text-ink font-sans antialiased transition-colors duration-300;
+    background-image: 
+      radial-gradient(at 0% 0%, rgba(90, 90, 64, 0.03) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, rgba(90, 90, 64, 0.03) 0px, transparent 50%);
   }
 }
 
 .markdown-body {
-  @apply font-serif text-lg leading-relaxed;
+  @apply font-serif text-xl leading-relaxed text-ink/90;
+}
+
+.paper-texture {
+  background-image: url("https://www.transparenttextures.com/patterns/paper-fibers.png");
+}
+
+.glass {
+  @apply bg-white/40 dark:bg-white/5 backdrop-blur-md border border-white/20 dark:border-white/10;
+}
+
+.btn-gradient {
+  @apply bg-gradient-to-br from-accent to-accent/80 hover:from-accent/90 hover:to-accent transition-all duration-300 shadow-lg shadow-accent/20 hover:shadow-xl hover:shadow-accent/30;
+}
+
+textarea::-webkit-scrollbar {
+  width: 6px;
+}
+
+textarea::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+textarea::-webkit-scrollbar-thumb {
+  @apply bg-accent/20 rounded-full hover:bg-accent/40 transition-colors;
 }
